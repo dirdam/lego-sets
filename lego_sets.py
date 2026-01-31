@@ -63,7 +63,7 @@ def calculate_compatibility(models_df, my_models):
         compatibility_dfs[model] = compatibility_df
     # Convert dict to DataFrame for display
     compatibility_df = pd.DataFrame(list(compatibility_values.items()), columns=['Model', 'Compatibility'])
-    compatibility_df = compatibility_df.sort_values(by='Compatibility', ascending=False)
+    compatibility_df = compatibility_df.sort_values(by='Compatibility', ascending=False).reset_index(drop=True)
     compatibility_df['text'] = compatibility_df.apply(lambda row: f"{int(row['Model'])} ({row['Compatibility']*100:.2f}%)", axis=1)
     compatibility_df['Parts URL'] = compatibility_df['Model'].apply(lambda x: f"[Bricklink {x}](https://www.bricklink.com/CatalogItemInv.asp?S={x}-1)")
     compatibility_df['Instructions URL'] = compatibility_df['Model'].apply(lambda x: f"[Instructions {x}](https://www.lego.com/en-us/service/building-instructions/{x})")
