@@ -1,12 +1,6 @@
 pandas
 requests
 beautifulsoup4
-streamlit
-pypdf
-PyPDF2
-pdf2image
-pytesseract
-pillow
-numpy
+lxml
 streamlit==1.24.1
 altair==4.2.2
