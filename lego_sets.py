@@ -2,53 +2,43 @@ import streamlit as st
 import pandas as pd
 import utils
 
+st.set_page_config(initial_sidebar_state="collapsed")
+
 st.markdown("# LEGO Sets")
 
-# ========== Process all Technic models ==========
-# (Run update only once in a while, when new sets are released)
+st.markdown("This app will help you find which models are accessible with the pieces you already have in your collection.")
+st.markdown("For instructions on how to use, open the sidebar on the left.")
+
+with st.sidebar:
+    st.markdown("""
+    ## How to use
+    1. Select the **models you own** from the list. (You can choose **multiple models**)
+    2. The app will calculate the **compatibility** of all other models in the dataset with your collection.
+        - **Compatibility** is defined as the percentage of pieces required by a model that you already have in your collection.
+    3. In the dropdown menu, choose a model from the compatibility list and you will see which pieces you are **missing** to complete that model.
+        - Sometimes the pieces you are missing are just decorative, or you can substitute the piece with another one you have.
+    """)
 
 models_df = pd.read_csv("lego_sets.csv")
-if st.button("Update LEGO dataset"):
-    sets_to_explore = range(42000, 43000)
-    technic_models = [i for i in sets_to_explore]
-
-    progress_bar = st.progress(0)
-    spinner_placeholder = st.empty()
-    for idx, model in enumerate(technic_models):
-        progress_bar.progress((idx + 1) / len(technic_models))
-        if model in models_df['Model'].values:
-            spinner_placeholder.text(f"Model {model} already in dataset")
-        else:
-            spinner_placeholder.text(f"Processing model: {model}")
-            processor = utils.LegoModelProcessor(model)
-            html = processor._fetch_html()
-            df = processor._parse_html(html)
-            if len(df) == 0:
-                spinner_placeholder.text(f"> Model {model} not found, skipping")
-                continue
-            df['Model'] = model
-            models_df = pd.concat([models_df, df], ignore_index=True)
-            models_df = models_df.sort_values(by=['Model', 'Item No', 'Description'])
-            models_df.to_csv("lego_sets.csv", index=False)
-    spinner_placeholder.empty()
-    progress_bar.empty()
+# models_info_df = pd.read_csv("lego_model_info.csv")
+# models_df = models_df.merge(models_info_df[['Model', 'Name']], on='Model', how='left')
+piece_info_df = pd.read_csv("lego_pieces.csv")
+models_df = models_df.merge(piece_info_df, on='Item No', how='left')
+models_df['Color'] = models_df.apply(lambda row: row['Description'].replace(row['Name'], '').strip() if row['IsPart'] and row['Name'] != '?' else '', axis=1)
+models_df = models_df.drop(columns=['Description'])
 
 # ========== Fetch my models ==========
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    my_model1 = st.checkbox("Include 42218 (John Deere)", value=True)
-with col2:
-    my_model2 = st.checkbox("Include 42108 (Crane)", value=True)
-with col3:
-    my_model3 = st.checkbox("Include 42175 (Truck & Excavator)", value=True)
-my_models = []
-if my_model1:
-    my_models.append(42218)
-if my_model2:
-    my_models.append(42108)
-if my_model3:
-    my_models.append(42175)
+models_info_df = pd.read_csv("lego_model_info.csv")
+available_models = models_info_df[['Model', 'Name']].drop_duplicates().set_index('Model')['Name'].to_dict()
+
+selected_options = st.multiselect(
+    "1. Select your models:",
+    options=[f"{model} ({name})" for model, name in available_models.items()],
+    default=[]
+)
+
+my_models = [int(option.split(" ")[0]) for option in selected_options]
 
 @st.cache_data
 def calculate_compatibility(models_df, my_models):
@@ -64,17 +54,58 @@ def calculate_compatibility(models_df, my_models):
     # Convert dict to DataFrame for display
     compatibility_df = pd.DataFrame(list(compatibility_values.items()), columns=['Model', 'Compatibility'])
     compatibility_df = compatibility_df.sort_values(by='Compatibility', ascending=False).reset_index(drop=True)
-    compatibility_df['text'] = compatibility_df.apply(lambda row: f"{int(row['Model'])} ({row['Compatibility']*100:.2f}%)", axis=1)
     compatibility_df['Parts URL'] = compatibility_df['Model'].apply(lambda x: f"[Bricklink {x}](https://www.bricklink.com/CatalogItemInv.asp?S={x}-1)")
     compatibility_df['Instructions URL'] = compatibility_df['Model'].apply(lambda x: f"[Instructions {x}](https://www.lego.com/en-us/service/building-instructions/{x})")
+    compatibility_df['Compatibility'] = compatibility_df['Compatibility'].apply(lambda x: f"{x*100:.2f}%")
     return compatibility_df, compatibility_dfs
 
-compatibility_df, compatibility_dfs = calculate_compatibility(models_df, tuple(my_models))
-selected_model = st.selectbox("Select model", options=compatibility_df['text'].tolist()[len(my_models):])
-if selected_model:
-    selected_model_number = int(selected_model.split(' ')[0])
-    df = compatibility_dfs[selected_model_number]
-    with st.expander(f"Missing pieces", expanded=False):
-        st.dataframe(df[df['Compatible'] == False])
+if not my_models:
+    st.info("Please select at least one model to proceed.")
+    st.stop()
 
-st.table(compatibility_df[[c for c in compatibility_df.columns if c != 'text']])
+# Initialize session state
+if 'calculated_models' not in st.session_state:
+    st.session_state.calculated_models = None
+if 'compatibility_df' not in st.session_state:
+    st.session_state.compatibility_df = None
+if 'compatibility_dfs' not in st.session_state:
+    st.session_state.compatibility_dfs = None
+
+# Check if models have changed from the last calculation
+models_changed = st.session_state.calculated_models != tuple(my_models)
+
+# Show button only if models changed or no calculation exists yet
+if models_changed:
+    if st.button("Calculate compatibility"):
+        with st.spinner("Calculating compatibility..."):
+            compatibility_df, compatibility_dfs = calculate_compatibility(models_df, tuple(my_models))
+            compatibility_df = compatibility_df.merge(models_info_df[['Model', 'Name']].drop_duplicates(), on='Model', how='left')
+            st.session_state.compatibility_df = compatibility_df
+            st.session_state.compatibility_dfs = compatibility_dfs
+            st.session_state.calculated_models = tuple(my_models)
+            st.rerun()
+
+# Display results if they exist and models haven't changed
+if not models_changed and st.session_state.compatibility_df is not None:
+    compatibility_df = st.session_state.compatibility_df
+    compatibility_dfs = st.session_state.compatibility_dfs
+
+    compatibility_options = compatibility_df.apply(lambda row: f"""{row['Compatibility']} - {int(row['Model'])} ({available_models[row['Model']]})""", axis=1).tolist()
+    compatibility_models = compatibility_df['Model'].tolist()
+
+    selected_model = st.selectbox("Select model by compatibility %:", options=compatibility_options[len(my_models):])
+    if selected_model:
+        selected_model_number = compatibility_models[compatibility_options.index(selected_model)]
+        df = compatibility_dfs[selected_model_number]
+        st.markdown(f"## Model {selected_model_number} - {available_models[selected_model_number]}")
+        st.markdown(f"""- Compatibility: **{compatibility_df[compatibility_df['Model'] == selected_model_number]['Compatibility'].values[0]}**
+- Parts list: [Bricklink ↗](https://www.bricklink.com/CatalogItemInv.asp?S={selected_model_number}-1)
+- Building instructions: [LEGO ↗](https://www.lego.com/en-us/service/building-instructions/{selected_model_number})""")
+        st.markdown("This is the list of pieces you need to complete the model:")
+        df = df.sort_values(by='Missing Qty', ascending=False)
+        df['Item No'] = df['Item No'].apply(lambda x: f"[{x}](https://www.bricklink.com/v2/catalog/catalogitem.page?P={x})")
+        df['Compatible'] = df['Compatible'].apply(lambda x: "✅" if x else "❌")
+        st.table(df)
+
+    compatibility_df = compatibility_df[['Model', 'Name', 'Compatibility', 'Parts URL', 'Instructions URL']]
+    st.table(compatibility_df[[c for c in compatibility_df.columns if c != 'text']])
