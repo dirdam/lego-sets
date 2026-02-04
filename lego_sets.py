@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import utils
 
-st.set_page_config(initial_sidebar_state="collapsed")
+st.set_page_config(initial_sidebar_state="auto", layout="wide", page_title="LEGO Sets Compatibility Finder", page_icon="☯️")
 
-st.markdown("# LEGO Sets")
+st.markdown("# LEGO Sets Compatibility Finder")
 
-st.markdown("This app will help you find which models are reproducible with the pieces you already have in your collection.")
+st.markdown("This app will help you find which **LEGO Technic** models are reproducible with the pieces you already have in your collection.")
 st.markdown("The models will show the _pieces you are missing_ to complete them. Use that **builder brain** to make up for the missing pieces with what you have! 💡")
 st.markdown("For **instructions** on how to use, **open the sidebar** on the left.")
 
