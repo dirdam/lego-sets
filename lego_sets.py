@@ -35,7 +35,9 @@ models_info_df = pd.read_csv(LEGO_MODEL_INFO_CSV)
 models_df = models_df.merge(piece_info_df, on='Item No', how='left')
 models_df['Color'] = models_df.apply(lambda row: row['Description'].replace(str(row['Name']), '').strip() if row['IsPart'] and row['Name'] != '?' else '', axis=1)
 models_df = models_df.drop(columns=['Description'])
+target_models = models_info_df[models_info_df['Category'].str.contains('Technic')]['Model'].tolist() # Restrict to Technic models only
 available_models = models_info_df[['Model', 'Name']].drop_duplicates().set_index('Model')['Name'].to_dict()
+available_models = {model: name for model, name in available_models.items() if model in target_models}
 
 selected_options = st.multiselect(
     "Select the models you own:",
@@ -105,7 +107,6 @@ if not models_changed and st.session_state.compatibility_df is not None:
     compatibility_df = compatibility_df[compatibility_df['Total pieces'] >= min_set_pieces]
 
     # Create options for dropdown
-    target_models = models_info_df[models_info_df['Category'].str.contains('Technic')]['Model'].tolist()
     compatibility_options = compatibility_df[compatibility_df['Model'].isin(target_models)].apply(lambda row: f"""⚠️ {row['Missing pieces']} | ☯️ {row['Compatibility']} | 🏷️ {int(row['Model'])} ({available_models[row['Model']]})""", axis=1).tolist()
     compatibility_models = compatibility_df[compatibility_df['Model'].isin(target_models)]['Model'].tolist()
 
