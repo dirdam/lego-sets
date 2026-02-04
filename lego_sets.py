@@ -8,7 +8,7 @@ st.markdown("# LEGO Sets Compatibility Finder")
 
 st.markdown("This app will help you find which **LEGO Technic** models are reproducible with the pieces you already have in your collection.")
 st.markdown("The models will show the _pieces you are missing_ to complete them. Use that **builder brain** to make up for the missing pieces with what you have! 💡")
-st.markdown("For **instructions** on how to use, **open the sidebar** on the left.")
+st.markdown("For **instructions** on how to use, **read the sidebar** on the left.")
 
 with st.sidebar:
     st.markdown("""
@@ -103,7 +103,7 @@ if not models_changed and st.session_state.compatibility_df is not None:
     compatibility_dfs = st.session_state.compatibility_dfs
 
     # Select minimal number of pieces
-    min_set_pieces = st.slider("Minimum number of pieces you want the models to have:", min_value=0, max_value=1000, value=50, step=10)
+    min_set_pieces = st.slider("Minimum number of pieces you want the models to have:", min_value=0, max_value=500, value=50, step=25)
     compatibility_df = compatibility_df[compatibility_df['Total pieces'] >= min_set_pieces]
 
     # Create options for dropdown
