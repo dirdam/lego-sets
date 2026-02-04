@@ -133,9 +133,12 @@ class LegoModelSubsetProcessor:
         common = want_df.merge(my_df, on='Item No', how='left', suffixes=('_want', '_my'))
         common['Qty_my'] = common['Qty_my'].fillna(0).astype(int)
         common['Qty_diff'] = common['Qty_my'] - common['Qty_want']
-        common['Compatible'] = common['Qty_diff'] >= 0
+        common['Owned'] = common['Qty_diff'] >= 0
+        common['Needed Qty'] = common['Qty_want']
         common['Missing Qty'] = common.apply(lambda row: max(0, row['Qty_want'] - row['Qty_my']), axis=1)
-        return common[['Item No', 'Compatible', 'Missing Qty']]
+        return common[['Item No', 'Owned', 'Needed Qty', 'Missing Qty']]
 
     def get_compatibility(self, compatibility_df):
-        return compatibility_df['Compatible'].sum()/len(compatibility_df)
+        percentage = compatibility_df['Owned'].sum()/len(compatibility_df)
+        missing = compatibility_df['Missing Qty'].sum()
+        return {'percentage': percentage, 'missing': missing}
