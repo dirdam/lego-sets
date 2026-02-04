@@ -139,6 +139,6 @@ class LegoModelSubsetProcessor:
         return common[['Item No', 'Owned', 'Needed Qty', 'Missing Qty']]
 
     def get_compatibility(self, compatibility_df):
-        percentage = compatibility_df['Owned'].sum()/len(compatibility_df)
         missing = compatibility_df['Missing Qty'].sum()
+        percentage = 1 - missing/compatibility_df['Needed Qty'].sum()
         return {'percentage': percentage, 'missing': missing}
