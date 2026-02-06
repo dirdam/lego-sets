@@ -15,6 +15,7 @@ with st.sidebar:
     ## How to use
     1. Select or type the **models you own**. (You can choose **multiple models**)
     2. The app will calculate the **compatibility** of all other models in the dataset with your collection.
+        - 🧩 **Total pieces**: `total pieces`
         - ⚠️ **Missing pieces**: `total pieces - owned pieces`
         - ☯️ **Compatibility**: `pieces owned / total pieces`
         - 🏷️ **Model**: model number and model name    
@@ -107,7 +108,7 @@ if not models_changed and st.session_state.compatibility_df is not None:
     compatibility_df = compatibility_df[compatibility_df['Total pieces'] >= min_set_pieces]
 
     # Create options for dropdown
-    compatibility_options = compatibility_df[compatibility_df['Model'].isin(target_models)].apply(lambda row: f"""⚠️ {row['Missing pieces']} | ☯️ {row['Compatibility']} | 🏷️ {int(row['Model'])} ({available_models[row['Model']]})""", axis=1).tolist()
+    compatibility_options = compatibility_df[compatibility_df['Model'].isin(target_models)].apply(lambda row: f"""🧩 {row['Total pieces']} | ⚠️ {row['Missing pieces']} | ☯️ {row['Compatibility']} | 🏷️ {int(row['Model'])} ({available_models[row['Model']]})""", axis=1).tolist()
     compatibility_models = compatibility_df[compatibility_df['Model'].isin(target_models)]['Model'].tolist()
 
     # Create dropdown
